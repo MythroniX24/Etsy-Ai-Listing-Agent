@@ -14,7 +14,7 @@ def get_updates(offset):
         req = urllib.request.Request(url)
         res = urllib.request.urlopen(req)
         return json.loads(res.read()).get("result", [])
-    except:
+    except Exception as e:
         return []
 
 def send_message(chat_id, text):
@@ -23,10 +23,11 @@ def send_message(chat_id, text):
     req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
     try:
         urllib.request.urlopen(req)
-    except:
+    except Exception as e:
         pass
 
 def send_to_make(text):
+    # 👇 Data ka structure ekdum perfectly align kiya gaya hai
     data = {
         "title": text[:40], 
         "description": "Telegram Bot se bheja gaya product: " + text,
@@ -34,6 +35,36 @@ def send_to_make(text):
         "quantity": 1
     }
     req = urllib.request.Request(WEBHOOK_URL, data=json.dumps(data).encode('utf-8'), headers={'Content-Type': 'application/json'})
+    try:
+        urllib.request.urlopen(req)
+        return True
+    except Exception as e:
+        return False
+
+print("🤖 Jadoo shuru! Bot chalu ho gaya hai...")
+
+offset = 0
+while True:
+    try:
+        updates = get_updates(offset)
+        for update in updates:
+            offset = update["update_id"] + 1
+            if "message" in update and "text" in update["message"]:
+                chat_id = update["message"]["chat"]["id"]
+                user_text = update["message"]["text"]
+                
+                if user_text == "/start":
+                    send_message(chat_id, "👋 Hello Boss! Main aapka Etsy AI Bot hu. Mujhe kisi bhi product ka naam bhejein, aur main usko automatically Make.com ke zariye Etsy par daal dunga!")
+                else:
+                    send_message(chat_id, "⏳ Make.com ko bhej raha hu, 2 second dijiye...")
+                    success = send_to_make(user_text)
+                    if success:
+                        send_message(chat_id, "✅ Boom! 💥 Aapka product Make.com ne receive kar liya hai aur Etsy par chala gaya!")
+                    else:
+                        send_message(chat_id, "❌ Error aaya Make.com ko bhejne me. Check karein.")
+    except Exception as e:
+        pass
+    time.sleep(2)
     try:
         urllib.request.urlopen(req)
         return True
